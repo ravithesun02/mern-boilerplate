@@ -11,6 +11,22 @@ import UserRoute from './routes/user.routes';
 
 import AuthRoute from './routes/auth.routes';
 
+//FOR SERVER SIDE RENDERING
+// 1.The following modules are required to render the React components and use renderToString :
+import React from 'react';
+import ReactDOMServer from 'react-dom/server';
+/*2. staticRouter is a stateless router that takes the
+requested URL to match with the frontend route which was declared in the
+MainRouter component. The MainRouter is the root component in our
+frontend. */
+import StaticRouter from 'react-router-dom/StaticRouter';
+import MainRouter from './../client/MainRouter';
+
+/*3.The following modules will
+help generate the CSS styles for the frontend components based on the
+stylings and Material-UI theme that are used on the frontend: */
+import {ServerStyleSheets,ThemeProvider} from '@material-ui/styles';
+import theme from './../client/theme';
 //end
 
 //comment out before building for production
@@ -37,8 +53,28 @@ app.use('/dist', express.static(path.join(CURRENT_WORKING_DIR, 'dist')))
 app.use('/',UserRoute);
 app.use('/',AuthRoute);
 
-app.get('/',(req,res)=>{
-  res.status(200).send(Template());
+
+app.get('*',(req,res)=>{
+  const sheets=new ServerStyleSheets();
+  const context={};
+  const markup=ReactDOMServer.renderToString(
+    sheets.collect(
+      <StaticRouter location={req.url} context={context}>
+        <ThemeProvider theme={theme}>
+            <MainRouter/>
+        </ThemeProvider>
+      </StaticRouter>
+    )
+  );
+  
+  if(context.url)
+      return res.redirect(303,context.url)
+  const css=sheets.toString();
+
+  res.status(200).send(Template({
+    markup:markup,
+    css:css
+  }));
 })
 //catch error thrown by express-jwt
 app.use((err,req,res,next)=>{
